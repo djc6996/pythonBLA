@@ -4,6 +4,9 @@ import asyncio
 import requests
 import base64
 import urllib.parse
+import threading
+import time
+import sys
 
 from bs4 import BeautifulSoup
 from telegram import Update, Bot
@@ -12,8 +15,6 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
 )
-import threading
-import time
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -36,6 +37,12 @@ class MonitorBot:
         self.monitors = {}  # (chat_id, city, age_min, age_max, username) -> {"last_status": str, "active": bool}
         self.lock = threading.Lock()
 
+    def shutdown_after_20_hours():
+        time.sleep(20 * 3600)  # 20 ore in secondi
+        print("20 ore trascorse, spegnimento del bot.")
+        # Qui puoi chiamare un metodo per fermare il polling o terminare il processo
+        sys.exit(0)
+    
     def get_csrf_token(self):
         response = self.session.get(LOGIN_URL)
         response.raise_for_status()
@@ -130,10 +137,23 @@ class MonitorBot:
                 with self.lock:
                     self.monitors[key]["active"] = False
                 return
+            
+            start_time = time.time()  # MODIFICA: tempo di inizio
+            
             while True:
                 with self.lock:
                     if not self.monitors[key]["active"]:
                         break
+                
+                # MODIFICA: controllo tempo trascorso
+                elapsed_time = time.time() - start_time
+                if elapsed_time > 20 * 3600:  # 20 ore in secondi
+                    logging.info(f"Monitoraggio per {target_user} terminato dopo 20 ore.")
+                    with self.lock:
+                        self.monitors[key]["active"] = False
+                        del self.monitors[key]
+                    break
+                
                 try:
                     status = self.cerca_utente_online(city, gender, age_min, age_max, target_user)
 
@@ -292,6 +312,10 @@ def main():
     application.add_handler(CommandHandler("help", help_command))
 
     print("Bot avviato.")
+    
+    # Avvia il thread per lo spegnimento automatico
+    threading.Thread(target=shutdown_after_20_hours, daemon=True).start()
+    
     application.run_polling()
 
 
