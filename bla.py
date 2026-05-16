@@ -5,9 +5,7 @@ import requests
 import base64
 import urllib.parse
 import threading
-import time
-import sys
-
+import time		 
 from bs4 import BeautifulSoup
 from telegram import Update, Bot
 from telegram.ext import (
@@ -15,6 +13,7 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
 )
+
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -37,12 +36,6 @@ class MonitorBot:
         self.monitors = {}  # (chat_id, city, age_min, age_max, username) -> {"last_status": str, "active": bool}
         self.lock = threading.Lock()
 
-    def shutdown_after_20_hours():
-        time.sleep(20 * 3600)  # 20 ore in secondi
-        print("20 ore trascorse, spegnimento del bot.")
-        # Qui puoi chiamare un metodo per fermare il polling o terminare il processo
-        sys.exit(0)
-    
     def get_csrf_token(self):
         response = self.session.get(LOGIN_URL)
         response.raise_for_status()
@@ -312,10 +305,6 @@ def main():
     application.add_handler(CommandHandler("help", help_command))
 
     print("Bot avviato.")
-    
-    # Avvia il thread per lo spegnimento automatico
-    threading.Thread(target=shutdown_after_20_hours, daemon=True).start()
-    
     application.run_polling()
 
 
